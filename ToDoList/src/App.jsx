@@ -1,59 +1,117 @@
 import { useState } from "react";
+import "./App.css";
+import FormularioTarefa from "./components/FormularioTarefa";
+import ListaTarefas from "./components/ListaTarefas";
+import Lixeira from "./components/Lixeira";
+import Sobre from "./components/Sobre";
 
 function App() {
   const [tarefas, setTarefas] = useState([]);
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [idEmEdicao, setIdEmEdicao] = useState(null);
+  const [mostrarLixeira, setMostrarLixeira] = useState(false);
+  const [mostrarSobre, setMostrarSobre] = useState(false);
 
-  function adicionarTarefa() {
+  function salvarTarefa() {
     if (titulo.trim() === "") return;
 
-    const novaTarefa = {
-      id: Date.now(),
-      titulo: titulo,
-      descricao: descricao,
-      criadaEm: new Date(),     
-      naLixeira: false,
-    };
-
-    setTarefas([...tarefas, novaTarefa]);
+    if (idEmEdicao !== null) {
+      setTarefas(
+        tarefas.map((tarefa) =>
+          tarefa.id === idEmEdicao ? { ...tarefa, titulo, descricao } : tarefa
+        )
+      );
+      setIdEmEdicao(null);
+    } else {
+      const novaTarefa = {
+        id: Date.now(),
+        titulo,
+        descricao,
+        criadaEm: new Date(),
+        naLixeira: false,
+      };
+      setTarefas([...tarefas, novaTarefa]);
+    }
 
     setTitulo("");
     setDescricao("");
   }
 
+  function iniciarEdicao(tarefa) {
+    setIdEmEdicao(tarefa.id);
+    setTitulo(tarefa.titulo);
+    setDescricao(tarefa.descricao);
+  }
+
+  function moverParaLixeira(id) {
+    setTarefas(
+      tarefas.map((tarefa) => (tarefa.id === id ? { ...tarefa, naLixeira: true } : tarefa))
+    );
+  }
+
+  function recuperarTarefa(id) {
+    setTarefas(
+      tarefas.map((tarefa) => (tarefa.id === id ? { ...tarefa, naLixeira: false } : tarefa))
+    );
+  }
+
+  function deletarPermanente(id) {
+    setTarefas(tarefas.filter((tarefa) => tarefa.id !== id));
+  }
+
+  const tarefasAtivas = tarefas.filter((t) => !t.naLixeira);
+  const tarefasNaLixeira = tarefas.filter((t) => t.naLixeira);
+
   return (
-    <div style={{ padding: 24, fontFamily: "sans-serif", maxWidth: 500 }}>
+    <div className="app-container">
       <h1>Minhas Tarefas</h1>
 
-      <input
-        value={titulo}
-        onChange={(e) => setTitulo(e.target.value)}
-        placeholder="Título da tarefa"
-        style={{ display: "block", marginBottom: 8, padding: 8, width: "100%" }}
-      />
-      <input
-        value={descricao}
-        onChange={(e) => setDescricao(e.target.value)}
-        placeholder="Descrição (opcional)"
-        style={{ display: "block", marginBottom: 8, padding: 8, width: "100%" }}
-      />
-      <button onClick={adicionarTarefa}>Adicionar</button>
+      <button
+        className="btn-lixeira"
+        onClick={() => {
+          setMostrarSobre(false);
+          setMostrarLixeira(!mostrarLixeira);
+        }}
+      >
+        {mostrarLixeira ? "← Voltar para tarefas" : `Ver lixeira (${tarefasNaLixeira.length})`}
+      </button>
 
-      <ul style={{ listStyle: "none", padding: 0, marginTop: 20 }}>
-        {tarefas.map((tarefa) => (
-          <li
-            key={tarefa.id}
-            style={{ border: "1px solid #ccc", borderRadius: 8, padding: 12, marginBottom: 8 }}
-          >
-            <strong>{tarefa.titulo}</strong>
-            <p style={{ margin: "4px 0" }}>{tarefa.descricao}</p>
-            <small style={{ color: "#666" }}>
-              Criada em: {tarefa.criadaEm.toLocaleString()}
-            </small>
-          </li>
-        ))}
-      </ul>
+      <button
+        className="btn-lixeira"
+        onClick={() => {
+          setMostrarLixeira(false);
+          setMostrarSobre(!mostrarSobre);
+        }}
+      >
+        {mostrarSobre ? "← Voltar" : "Sobre"}
+      </button>
+
+      {mostrarSobre ? (
+        <Sobre />
+      ) : mostrarLixeira ? (
+        <Lixeira
+          tarefas={tarefasNaLixeira}
+          onRecuperar={recuperarTarefa}
+          onDeletarPermanente={deletarPermanente}
+        />
+      ) : (
+        <>
+          <FormularioTarefa
+            titulo={titulo}
+            descricao={descricao}
+            setTitulo={setTitulo}
+            setDescricao={setDescricao}
+            onSalvar={salvarTarefa}
+            emEdicao={idEmEdicao !== null}
+          />
+          <ListaTarefas
+            tarefas={tarefasAtivas}
+            onEditar={iniciarEdicao}
+            onMoverParaLixeira={moverParaLixeira}
+          />
+        </>
+      )}
     </div>
   );
 }
